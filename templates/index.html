@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Audio Recorder</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>Pillpal</h1>
+        <div class="audio-recorder">
+            <button id="recordBtn" class="btn btn-primary">
+                <span class="icon">🎙️ Démarrer</span>
+            </button>
+            <button id="stopBtn" class="btn btn-secondary" disabled>
+                <span class="icon">⏹️</span>
+            </button>
+
+            <button id="saveBtn" class="btn btn-success" disabled>
+                <span class="icon">💾Enregistrer </span>
+            </button>
+            <form id="durationForm" class="duration-form">
+                <input type="number" id="duration" name="duration" value="5" min="1" class="input-duration">
+                <label for="duration">s</label>
+            </form>
+            <div id="recordingIndicator" class="recording-indicator"></div>
+            <div>
+                <button class="btn" onclick="window.location.href='http://localhost:5001/';">
+                    Générer le Compte Rendu
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('recordBtn').onclick = function() {
+            const duration = document.getElementById('duration').value;
+            fetch('/start-recording', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                },
+                body: 'duree=' + encodeURIComponent(duration)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === "Recording started") {
+                    document.getElementById('recordBtn').disabled = true;
+                    document.getElementById('stopBtn').disabled = false;
+                    document.getElementById('recordingIndicator').style.display = 'block';
+                }
+            });
+        };
+
+        document.getElementById('stopBtn').onclick = function() {
+            fetch('/stop-recording', {
+                method: 'POST'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === "Recording stopped") {
+                    document.getElementById('stopBtn').disabled = true;
+                    document.getElementById('saveBtn').disabled = false;
+                    document.getElementById('recordingIndicator').style.display = 'none';
+                }
+            });
+        };
+
+        document.getElementById('saveBtn').onclick = function() {
+            fetch('/save-recording', { method: 'POST' })
+            .then(response => {
+                if (response.ok) {
+                    return response.blob();
+                }
+                throw new Error('Recording save failed');
+            })
+            .then(blob => {
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.style.display = 'none';
+                a.href = url;
+                a.download = 'recording.mp3';
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+            })
+            .catch(error => {
+                console.error('Error:', error.message);
+            });
+        };
+    </script>
+</body>
+</html>
